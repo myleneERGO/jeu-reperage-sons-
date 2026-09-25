@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Où est le son ? — version jetons</title>
+<style>
+  :root{
+    --bg:#f5f7fb; --card:#ffffff; --ink:#172033; --muted:#667085;
+    --line:#d9dfeb; --ok:#dff7e8; --bad:#ffe6e6; --accent:#375dfb;
+    --shadow:0 14px 34px rgba(31,42,68,.10);
+    --vowel:#2563eb; --cons:#d12b2b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+  button,input,select{font:inherit}
+  button{cursor:pointer}
+  .app{max-width:1100px;margin:auto;padding:18px}
+  .topbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:48px;height:48px;border-radius:14px;background:#fff;display:grid;place-items:center;font-size:28px;box-shadow:var(--shadow)}
+  h1{font-size:clamp(24px,4vw,36px);margin:0}
+  .subtitle{color:var(--muted);margin-top:4px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:var(--shadow)}
+  .hidden{display:none!important}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+  .section{border:1px solid var(--line);border-radius:16px;padding:16px}
+  .section h2,.section h3{margin:0 0 12px}
+  .chips{display:flex;flex-wrap:wrap;gap:9px}
+  .chip{position:relative}
+  .chip input{position:absolute;opacity:0;pointer-events:none}
+  .chip label{display:inline-flex;min-width:46px;justify-content:center;align-items:center;padding:10px 13px;border:2px solid var(--line);border-radius:999px;font-weight:700;background:#fff}
+  .chip input:checked+label{border-color:var(--accent);background:#eef2ff;color:#1639d4}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .field{display:flex;flex-direction:column;gap:7px;margin:10px 0}
+  select,input[type="number"]{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff}
+  .toggle{display:flex;align-items:center;gap:9px;margin:10px 0}
+  .toggle input{width:20px;height:20px}
+  .btn{border:0;border-radius:14px;padding:12px 18px;font-weight:700;background:#e9edf5;color:#172033}
+  .btn.primary{background:var(--accent);color:#fff}
+  .btn.big{font-size:20px;padding:16px 22px}
+  .btn.ghost{background:#fff;border:1px solid var(--line)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .hint{font-size:14px;color:var(--muted);line-height:1.45}
+  details{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:#fafbfe}
+  details summary{font-weight:700;cursor:pointer}
+
+  .legendInline{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px}
+  .legendInline span{font-weight:700}
+  .legendVowel{color:var(--vowel)}
+  .legendCons{color:var(--cons)}
+
+  .gameShell{display:grid;gap:14px}
+  .hud{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .hudBox{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px;text-align:center}
+  .hudBox b{display:block;font-size:20px}
+  .hudBox span{font-size:12px;color:var(--muted)}
+  .progress{height:12px;background:#e7ebf3;border-radius:99px;overflow:hidden}
+  .progress>div{height:100%;width:0;background:var(--accent);transition:.3s}
+  .gameCard{min-height:620px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:18px;text-align:center}
+  .levelTag{font-weight:700;color:#4f5d75;background:#eef1f6;border-radius:999px;padding:7px 12px}
+  .targetWrap{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center}
+  .targetSound{font-size:clamp(52px,11vw,92px);font-weight:800;line-height:1;background:#eef2ff;border:2px solid #c9d4ff;border-radius:22px;padding:18px 28px;min-width:126px}
+  .example{font-size:16px;color:var(--muted)}
+  .itemBox{min-height:100px;display:grid;place-items:center}
+  .itemText{font-size:clamp(28px,5vw,44px);font-weight:800;letter-spacing:.02em; line-height:1.2; min-height:52px}
+  .circleWord{
+    display:flex;flex-wrap:wrap;justify-content:center;gap:10px;min-height:74px;align-items:center;
+    padding:6px 8px;
+  }
+  .letterCircle{
+    width:58px;height:58px;border-radius:50%;border:3px solid #b9c3d8;background:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:28px;
+    box-shadow:0 6px 14px rgba(23,32,51,.06);
+  }
+  .letterCircle.placeholder{
+    background:#f9fbff;border-style:dashed;color:#c1c8d6;
+  }
+  .letterCircle.targetMark{
+    box-shadow:0 0 0 4px rgba(55,93,251,.12);
+    border-color:#5f81ff;
+  }
+  .circleHint{
+    font-size:14px;color:#98a2b3;font-weight:700;letter-spacing:.08em;text-align:center;width:100%;
+  }
+  .letter.vowel{color:var(--vowel)}
+  .letter.cons{color:var(--cons)}
+  .letter.neutral{color:#172033}
+
+  .listen{display:flex;align-items:center;gap:8px}
+  .feedback{min-height:40px;font-size:20px;font-weight:700}
+  .feedback.good{color:#157b40}
+  .feedback.bad{color:#b32d2d}
+  .stars{font-size:30px;letter-spacing:4px;min-height:36px}
+  .soundMap{display:flex;gap:10px;align-items:center;justify-content:center;min-height:26px}
+  .dot{width:22px;height:22px;border-radius:50%;border:2px solid #b8c0d0;background:#fff}
+  .dot.on{background:#ffcf57;border-color:#d8a718}
+
+  .tokenArea{display:grid;gap:14px;width:min(900px,100%)}
+  .tokenTray{
+    border:2px dashed #c9d2e3;border-radius:18px;padding:14px;background:#fafcff;
+    display:flex;justify-content:center;align-items:center;min-height:86px;
+  }
+  .trayTitle{font-size:14px;color:var(--muted);margin-bottom:4px}
+  .tokenWrap{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .draggableToken{
+    min-width:96px;min-height:56px;padding:10px 16px;border-radius:999px;border:2px solid #8aa5ff;
+    background:#eef2ff;color:#1639d4;font-weight:800;font-size:28px;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 8px 20px rgba(55,93,251,.15); user-select:none; touch-action:none;
+  }
+  .draggableToken.dragging{opacity:.55;transform:scale(.96)}
+  .dropZones{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .dropZone{
+    border:2px dashed #c8d0de;border-radius:18px;padding:12px;background:#fff;
+    min-height:140px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+    transition:.2s;
+  }
+  .dropZone.active{border-color:#5f81ff;background:#f4f7ff}
+  .dropZone.correct{background:var(--ok);border-color:#58b87e}
+  .dropZone.wrong{background:var(--bad);border-color:#e26b6b;animation:shake .25s}
+  .zoneTitle{font-size:22px;font-weight:800;margin-bottom:8px}
+  .zoneHint{font-size:13px;color:var(--muted);margin-bottom:10px}
+  .zoneSlot{
+    flex:1;width:100%;display:flex;align-items:center;justify-content:center;border-radius:14px;
+    background:#f7f9fd; border:1px solid #e0e5ef; min-height:64px; padding:8px;
+  }
+  .placedToken{transform:none}
+  .clickHint{font-size:13px;color:var(--muted)}
+  .footerBtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+  .confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:99}
+  .confetti i{position:absolute;top:-20px;width:10px;height:14px;background:#375dfb;animation:fall 1.2s linear forwards}
+  @keyframes fall{to{transform:translateY(110vh) rotate(540deg)}}
+
+  .resultHero{text-align:center;padding:18px}
+  .scoreBig{font-size:64px;font-weight:900;margin:8px}
+  .tableWrap{overflow:auto}
+  table{width:100%;border-collapse:collapse}
+  th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left}
+  th{background:#f4f6fa}
+  @media(max-width:760px){
+    .hud{grid-template-columns:repeat(2,1fr)}
+    .dropZones{grid-template-columns:1fr}
+    .gameCard{min-height:680px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo">🔎</div>
+      <div>
+        <h1>Où est le son ?</h1>
+        <div class="subtitle">Écouter, repérer le son, visualiser le mot avec des cercles, puis découvrir les lettres.</div>
+      </div>
+    </div>
+    <button class="btn ghost" id="helpBtn">Mode d'emploi</button>
+  </div>
+
+  <section id="settingsScreen" class="panel">
+    <div class="grid">
+      <div class="section">
+        <h2>1. Sons à travailler</h2>
+        <h3>Voyelles</h3>
+        <div class="chips" id="vowelChips"></div>
+        <h3 style="margin-top:16px">Constrictives</h3>
+        <div class="chips" id="fricativeChips"></div>
+        <div class="row" style="margin-top:14px">
+          <button class="btn" id="allSounds">Tout cocher</button>
+          <button class="btn" id="vowelsOnly">Voyelles</button>
+          <button class="btn" id="fricativesOnly">Constrictives</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>2. Progression</h2>
+        <div class="field">
+          <label for="mode"><b>Mode</b></label>
+          <select id="mode">
+            <option value="progressive">Progression automatique</option>
+            <option value="level1">1 — Syllabes simples CV / VC</option>
+            <option value="level2">2 — Syllabes avec son au milieu</option>
+            <option value="level3">3 — Mots très courts</option>
+            <option value="level4">4 — Mots courts / moyens</option>
+            <option value="level5">5 — Mots plus longs</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="count"><b>Nombre d'items</b></label>
+          <select id="count">
+            <option>10</option>
+            <option selected>20</option>
+            <option>30</option>
+            <option>40</option>
+          </select>
+        </div>
+        <div class="hint">
+          Le jeu commence par les syllabes simples, puis introduit progressivement la position au milieu et des mots plus longs.
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>3. Aides</h2>
+        <label class="toggle"><input type="checkbox" id="autoSpeak" checked> Lire chaque item automatiquement</label>
+        <label class="toggle"><input type="checkbox" id="revealAfterAnswer" checked disabled> Dévoiler l'écriture après la bonne réponse</label>
+        <label class="toggle"><input type="checkbox" id="showMap"> Afficher la place du son après erreur</label>
+        <label class="toggle"><input type="checkbox" id="repeatWrong" checked> Autoriser plusieurs essais</label>
+        <div class="field">
+          <label for="voiceRate"><b>Vitesse de lecture</b></label>
+          <select id="voiceRate">
+            <option value="0.75">Lente</option>
+            <option value="0.9" selected>Normale</option>
+            <option value="1">Rapide</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>4. Code couleur</h2>
+        <div class="legendInline">
+          <span class="legendVowel">● Voyelles en bleu</span>
+          <span class="legendCons">● Consonnes en rouge</span>
+        </div>
+        <p class="hint" style="margin-top:12px">
+          L'enfant écoute le son cible puis la syllabe ou le mot <b>sans voir les lettres</b>.
+          Le mot est représenté par <b>des cercles</b>, un cercle par lettre.
+          Il déplace ensuite le jeton vers <b>Début</b>, <b>Milieu</b> ou <b>Fin</b>.
+          Les lettres apparaissent dans les cercles après la bonne réponse.
+        </p>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:center;margin-top:22px">
+      <button class="btn primary big" id="startBtn">▶ Commencer</button>
+    </div>
+  </section>
+
+  <section id="gameScreen" class="hidden gameShell">
+    <div class="hud">
+      <div class="hudBox"><b id="hudItem">1 / 20</b><span>Item</span></div>
+      <div class="hudBox"><b id="hudScore">0</b><span>Points</span></div>
+      <div class="hudBox"><b id="hudStreak">0</b><span>Série</span></div>
+      <div class="hudBox"><b id="hudLevel">1</b><span>Niveau</span></div>
+    </div>
+    <div class="progress"><div id="progressBar"></div></div>
+
+    <div class="panel gameCard">
+      <div class="levelTag" id="levelTag">Niveau 1 · syllabes simples</div>
+
+      <div class="targetWrap">
+        <div>
+          <div style="font-size:14px;color:#667085;margin-bottom:6px">SON CIBLE</div>
+          <div class="targetSound" id="targetSound">A</div>
+        </div>
+        <div>
+          <button class="btn listen" id="hearTarget">🔊 Écouter le son</button>
+          <div class="example" id="targetExample"></div>
+        </div>
+      </div>
+
+      <div class="itemBox" style="display:flex;flex-direction:column;gap:10px">
+        <div id="circleWord" class="circleWord"></div>
+        <div class="itemText" id="itemText"></div>
+      </div>
+
+      <div class="row">
+        <button class="btn big" id="hearItem">🔊 Écouter</button>
+      </div>
+
+      <div class="soundMap hidden" id="soundMap">
+        <span class="dot" data-p="start"></span>
+        <span class="dot" data-p="middle"></span>
+        <span class="dot" data-p="end"></span>
+      </div>
+
+      <div class="tokenArea">
+        <div>
+          <div class="trayTitle">Prends le jeton du son cible puis place-le dans la bonne case.</div>
+          <div class="tokenTray">
+            <div class="tokenWrap">
+              <div id="mainToken" class="draggableToken" draggable="true">A</div>
+              <div class="clickHint">Glisser-déposer ou cliquer puis choisir une case</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dropZones">
+          <div class="dropZone" data-position="start">
+            <div class="zoneTitle">Début</div>
+            <div class="zoneHint">Le son s'entend au début.</div>
+            <div class="zoneSlot"></div>
+          </div>
+          <div class="dropZone" data-position="middle">
+            <div class="zoneTitle">Milieu</div>
+            <div class="zoneHint">Le son s'entend au milieu.</div>
+            <div class="zoneSlot"></div>
+          </div>
+          <div class="dropZone" data-position="end">
+            <div class="zoneTitle">Fin</div>
+            <div class="zoneHint">Le son s'entend à la fin.</div>
+            <div class="zoneSlot"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feedback" id="feedback"></div>
+      <div class="stars" id="stars"></div>
+
+      <div class="footerBtns">
+        <button class="btn" id="resetTokenBtn">Replacer le jeton</button>
+        <button class="btn" id="skipBtn">Passer</button>
+        <button class="btn ghost" id="settingsBtn">⚙ Paramètres</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="resultScreen" class="panel hidden">
+    <div class="resultHero">
+      <div style="font-size:44px">🏆</div>
+      <h2>Partie terminée</h2>
+      <div class="scoreBig" id="finalScore">0%</div>
+      <div id="finalText"></div>
+    </div>
+    <div class="grid">
+      <div class="section">
+        <h3>Résumé</h3>
+        <p><b>Réponses justes au 1er essai :</b> <span id="firstTry"></span></p>
+        <p><b>Réussites finales :</b> <span id="finalCorrect"></span></p>
+        <p><b>Meilleure série :</b> <span id="bestStreak"></span></p>
+      </div>
+      <div class="section">
+        <h3>Par position</h3>
+        <div class="tableWrap">
+          <table>
+            <thead><tr><th>Position</th><th>Réussites</th><th>Total</th></tr></thead>
+            <tbody id="positionStats"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:18px">
+      <button class="btn primary big" id="replayBtn">↻ Rejouer</button>
+      <button class="btn big" id="backSettingsBtn">⚙ Modifier les paramètres</button>
+    </div>
+  </section>
+</div>
+
+<div id="confetti" class="confetti"></div>
+
+<dialog id="helpDialog" style="max-width:760px;border:0;border-radius:18px;padding:0;box-shadow:0 22px 70px rgba(0,0,0,.25)">
+  <div style="padding:22px">
+    <h2 style="margin-top:0">Mode d'emploi</h2>
+    <p>1. Choisir les sons et le niveau.</p>
+    <p>2. Écouter le <b>son cible</b> puis la <b>syllabe</b> ou le <b>mot</b>. Les lettres restent masquées et sont remplacées par des cercles.</p>
+    <p>3. Déplacer le <b>jeton</b> dans la case <b>Début</b>, <b>Milieu</b> ou <b>Fin</b>.</p>
+    <p>4. Quand la réponse est juste, les lettres apparaissent automatiquement dans les cercles.</p>
+    <p>5. En cas d'erreur, on peut réécouter et recommencer.</p>
+    <p>6. Les voyelles apparaissent en <span style="color:#2563eb;font-weight:700">bleu</span> et les consonnes en <span style="color:#d12b2b;font-weight:700">rouge</span>.</p>
+    <p class="hint">Sur tablette ou smartphone, un clic sur le jeton puis un clic sur une case permet aussi de répondre.</p>
+    <div style="text-align:right"><button class="btn primary" id="closeHelp">Fermer</button></div>
+  </div>
+</dialog>
+
+<script>
+(() => {
+  const SOUNDS = {
+    a:{label:"A", speech:"a", example:"comme dans « chat »", group:"vowel"},
+    e:{label:"É", speech:"é", example:"comme dans « clé »", group:"vowel"},
+    i:{label:"I", speech:"i", example:"comme dans « lit »", group:"vowel"},
+    o:{label:"O", speech:"o", example:"comme dans « mot »", group:"vowel"},
+    u:{label:"U", speech:"u", example:"comme dans « lune »", group:"vowel"},
+    f:{label:"F", speech:"feu", example:"comme dans « feu »", group:"fricative"},
+    s:{label:"S", speech:"se", example:"comme dans « sac »", group:"fricative"},
+    ch:{label:"CH", speech:"che", example:"comme dans « chat »", group:"fricative"},
+    j:{label:"J", speech:"jeu", example:"comme dans « jeu »", group:"fricative"},
+    z:{label:"Z", speech:"zeu", example:"comme dans « zoo »", group:"fricative"},
+    v:{label:"V", speech:"veu", example:"comme dans « vélo »", group:"fricative"}
+  };
+
+  const consonants = ["p","t","m","l","n"];
+  const vowels = ["a","i","o","u"];
+
+  const WORDS = {
+    a:{3:[["ami","start"],["âne","start"],["arc","start"],["sac","middle"],["lac","middle"],["mal","middle"],["chat","end"],["rat","end"],["pas","end"]],
+       4:[["arbre","start"],["avion","start"],["album","start"],["balle","middle"],["tasse","middle"],["gare","middle"],["déjà","end"],["panda","end"],["koala","end"]],
+       5:[["abricot","start"],["ananas","start"],["alarme","start"],["cabane","middle"],["salade","middle"],["banane","middle"],["cinéma","end"],["agenda","end"],["pyjama","end"]]},
+    e:{3:[["épi","start"],["été","start"],["élan","start"],["clé","end"],["nez","end"],["dé","end"],["blé","end"],["fée","end"],["thé","end"]],
+       4:[["école","start"],["épée","start"],["étui","start"],["bébé","middle"],["vélo","middle"],["zéro","middle"],["café","end"],["carré","end"],["côté","end"]],
+       5:[["écharpe","start"],["étoile","start"],["éponge","start"],["météo","middle"],["céréale","middle"],["pélican","middle"],["canapé","end"],["résumé","end"],["karaté","end"]]},
+    i:{3:[["île","start"],["ici","start"],["if","start"],["lit","end"],["riz","end"],["nid","end"],["fil","middle"],["pile","middle"],["mille","middle"]],
+       4:[["image","start"],["idée","start"],["hiver","start"],["fille","middle"],["livre","middle"],["pique","middle"],["joli","end"],["tapis","end"],["souris","end"]],
+       5:[["igloo","start"],["insecte","start"],["imageur","start"],["pirate","middle"],["dimanche","middle"],["girafe","middle"],["spaghetti","end"],["brocoli","end"],["confetti","end"]]},
+    o:{3:[["os","start"],["eau","start"],["haut","start"],["bol","middle"],["rose","middle"],["sol","middle"],["mot","end"],["dos","end"],["lot","end"]],
+       4:[["orange","start"],["olive","start"],["hôtel","start"],["robe","middle"],["botte","middle"],["porte","middle"],["vélo","end"],["zéro","end"],["métro","end"]],
+       5:[["oreille","start"],["océan","start"],["orage","start"],["tomate","middle"],["robot","middle"],["photo","middle"],["escargot","end"],["abricot","end"],["domino","end"]]},
+    u:{3:[["une","start"],["urne","start"],["usé","start"],["lune","middle"],["jupe","middle"],["mur","middle"],["lu","end"],["vu","end"],["jus","end"]],
+       4:[["usine","start"],["utile","start"],["unique","start"],["plume","middle"],["brume","middle"],["cube","middle"],["menu","end"],["tortue","end"],["tribu","end"]],
+       5:[["univers","start"],["ustensile","start"],["ukulélé","start"],["lumière","middle"],["musique","middle"],["numéro","middle"],["inconnu","end"],["farfelu","end"],["continu","end"]]},
+    f:{3:[["feu","start"],["fée","start"],["fin","start"],["café","middle"],["neuf","end"],["œuf","end"],["chef","end"],["bref","end"]],
+       4:[["fille","start"],["fort","start"],["four","start"],["café","middle"],["sofa","middle"],["info","middle"],["neuf","end"],["surf","end"],["cerf","end"]],
+       5:[["fusée","start"],["forêt","start"],["famille","start"],["girafe","middle"],["dauphin","middle"],["coffre","middle"],["photographe","end"],["paragraphe","end"],["agrafe","end"]]},
+    s:{3:[["sac","start"],["sel","start"],["sol","start"],["tasse","middle"],["bus","end"],["vis","end"],["os","end"],["puce","end"]],
+       4:[["singe","start"],["soupe","start"],["savon","start"],["tasse","middle"],["piste","middle"],["mousse","middle"],["tennis","end"],["virus","end"],["cactus","end"]],
+       5:[["soleil","start"],["salade","start"],["souris","start"],["piscine","middle"],["biscuit","middle"],["costume","middle"],["ananas","end"],["autobus","end"],["thermos","end"]]},
+    ch:{3:[["chat","start"],["chou","start"],["chic","start"],["vache","middle"],["mèche","end"],["riche","end"],["poche","end"],["bûche","end"]],
+        4:[["chien","start"],["chaud","start"],["chute","start"],["vache","middle"],["machine","middle"],["rocher","middle"],["dimanche","end"],["peluche","end"],["moustache","end"]],
+        5:[["cheval","start"],["chemise","start"],["château","start"],["cachot","middle"],["cochon","middle"],["marcher","middle"],["sandwich","end"],["cartouche","end"],["avalanche","end"]]},
+    j:{3:[["jeu","start"],["jus","start"],["jupe","start"],["bijou","middle"],["page","end"],["cage","end"],["âge","end"],["sage","end"]],
+       4:[["joue","start"],["jambe","start"],["jeudi","start"],["bijou","middle"],["pyjama","middle"],["trajet","middle"],["garage","end"],["nuage","end"],["fromage","end"]],
+       5:[["jardin","start"],["girafe","start"],["journal","start"],["déjeuner","middle"],["pyjama","middle"],["magique","middle"],["coquillage","end"],["village","end"],["visage","end"]]},
+    z:{3:[["zoo","start"],["zèle","start"],["zéro","start"],["gaz","end"],["quiz","end"],["onze","end"],["case","middle"],["rose","middle"]],
+       4:[["zèbre","start"],["zéro","start"],["zone","start"],["maison","middle"],["bazar","middle"],["lézard","middle"],["gaz","end"],["douze","end"],["treize","end"]],
+       5:[["zodiaque","start"],["zoologie","start"],["zébu","start"],["musée","middle"],["cuisine","middle"],["visage","middle"],["analyse","end"],["cerise","end"],["valise","end"]]},
+    v:{3:[["vie","start"],["veau","start"],["vue","start"],["rêve","end"],["cave","end"],["lave","end"],["savon","middle"],["navet","middle"]],
+       4:[["vélo","start"],["vache","start"],["ville","start"],["savon","middle"],["navire","middle"],["lavabo","middle"],["olive","end"],["salive","end"],["archive","end"]],
+       5:[["valise","start"],["village","start"],["voiture","start"],["cheval","middle"],["avion","middle"],["rivière","middle"],["captive","end"],["sportive","end"],["massive","end"]]}
+  };
+
+  const levels = {
+    1:{name:"Niveau 1 · syllabes simples CV / VC"},
+    2:{name:"Niveau 2 · son au milieu de la syllabe"},
+    3:{name:"Niveau 3 · mots très courts"},
+    4:{name:"Niveau 4 · mots courts / moyens"},
+    5:{name:"Niveau 5 · mots plus longs"}
+  };
+
+  const $ = s => document.querySelector(s);
+  const $$ = s => [...document.querySelectorAll(s)];
+  const VOWELS_ALL = "aeiouyàâäéèêëîïôöùûüœæAEIOUYÀÂÄÉÈÊËÎÏÔÖÙÛÜŒÆ";
+  let session=[], idx=0, score=0, streak=0, bestStreak=0, firstTryCorrect=0, finalCorrect=0;
+  let stats={start:{ok:0,total:0},middle:{ok:0,total:0},end:{ok:0,total:0}};
+  let settings={}, answeredCurrent=false, currentHadError=false, selectedToken=false;
+
+  function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+  function shuffle(arr){
+    const a=[...arr];
+    for(let i=a.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [a[i],a[j]]=[a[j],a[i]];
+    }
+    return a;
+  }
+
+  function syllablesFor(sound){
+    const isVowel = SOUNDS[sound].group === "vowel";
+    const grapheme = sound==="e" ? "é" : sound;
+    const out = {1:[],2:[]};
+    if(isVowel){
+      consonants.forEach(c=>{
+        out[1].push({text:cap(c+grapheme),position:"end"});
+        out[1].push({text:cap(grapheme+c),position:"start"});
+      });
+      ["p","t","m","l","n"].forEach(c=>{
+        const endC = c==="p" ? "m" : "p";
+        out[2].push({text:cap(c+grapheme+endC),position:"middle"});
+      });
+    } else {
+      vowels.forEach(v=>{
+        out[1].push({text:cap(grapheme+v),position:"start"});
+        out[1].push({text:cap(v+grapheme),position:"end"});
+      });
+      vowels.forEach((v,idx)=>{
+        const v2=vowels[(idx+1)%vowels.length];
+        out[2].push({text:cap(v+grapheme+v2),position:"middle"});
+      });
+    }
+    return out;
+  }
+
+  function itemPool(sound, level){
+    if(level===1 || level===2){
+      return syllablesFor(sound)[level].map(x=>({...x,sound,level,type:"syllable"}));
+    }
+    return (WORDS[sound][level]||[]).map(([text,position])=>({text:cap(text),position,sound,level,type:"word"}));
+  }
+
+  function renderChips(){
+    const v=$("#vowelChips"), f=$("#fricativeChips");
+    Object.entries(SOUNDS).forEach(([key,s])=>{
+      const wrap=document.createElement("div");
+      wrap.className="chip";
+      wrap.innerHTML=`<input type="checkbox" id="snd_${key}" value="${key}" checked><label for="snd_${key}">${s.label}</label>`;
+      (s.group==="vowel"?v:f).appendChild(wrap);
+    });
+  }
+
+  function selectedSounds(){
+    return Object.keys(SOUNDS).filter(k=>$("#snd_"+k).checked);
+  }
+
+  function buildSession(){
+    const sounds=selectedSounds();
+    if(!sounds.length){ alert("Choisissez au moins un son."); return false; }
+
+    settings = {
+      sounds,
+      mode:$("#mode").value,
+      count:parseInt($("#count").value,10),
+      autoSpeak:$("#autoSpeak").checked,
+      showMap:$("#showMap").checked,
+      repeatWrong:$("#repeatWrong").checked,
+      rate:parseFloat($("#voiceRate").value)
+    };
+
+    let levelPlan=[];
+    if(settings.mode==="progressive"){
+      for(let i=0;i<settings.count;i++){
+        const q=(i+.5)/settings.count;
+        levelPlan.push(q<=.23?1:q<=.40?2:q<=.60?3:q<=.80?4:5);
+      }
+    }else{
+      levelPlan=Array(settings.count).fill(parseInt(settings.mode.replace("level",""),10));
+    }
+
+    let lastSound=null, lastText=null;
+    session = levelPlan.map(level=>{
+      let availableSounds = shuffle(settings.sounds);
+      if(availableSounds.length>1 && availableSounds[0]===lastSound){
+        [availableSounds[0],availableSounds[1]]=[availableSounds[1],availableSounds[0]];
+      }
+      const sound=availableSounds[0];
+      let pool=shuffle(itemPool(sound,level));
+      let choice=pool.find(x=>x.text!==lastText) || pool[0];
+      lastSound=sound; lastText=choice.text;
+      return choice;
+    });
+    return true;
+  }
+
+  function speak(text){
+    if(!("speechSynthesis" in window)) return;
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang="fr-FR";
+    u.rate=settings.rate || .9;
+    const voices=speechSynthesis.getVoices();
+    const fr=voices.find(v=>/^fr(-|_)/i.test(v.lang));
+    if(fr) u.voice=fr;
+    u.pitch=1;
+    u.volume=1;
+    speechSynthesis.speak(u);
+  }
+
+  function speakTarget(){
+    const it=session[idx];
+    const map = {
+      "ch":"ch, comme dans chat",
+      "j":"j, comme dans jeu",
+      "z":"z, comme dans zoo",
+      "f":"f, comme dans feu",
+      "s":"s, comme dans sac",
+      "v":"v, comme dans vélo"
+    };
+    speak(map[it.sound] || SOUNDS[it.sound].speech);
+  }
+
+  function renderColoredText(text){
+    return [...text].map(ch=>{
+      const isLetter = /[A-Za-zÀ-ÿŒœÆæ]/.test(ch);
+      if(!isLetter) return `<span class="letter neutral">${ch}</span>`;
+      const cls = VOWELS_ALL.includes(ch) ? "vowel" : "cons";
+      return `<span class="letter ${cls}">${ch}</span>`;
+    }).join("");
+  }
+
+  function getTargetIndices(text, sound, position){
+    const lower = text.toLowerCase();
+    const g = (sound==="e" ? "é" : sound).toLowerCase();
+    let idx = lower.indexOf(g);
+    if(idx < 0 && sound==="e") idx = lower.search(/[eéèêë]/i);
+    if(idx < 0){
+      if(position==="start") return [0];
+      if(position==="end") return [Math.max(0, [...text].length-1)];
+      return [Math.floor(Math.max(0, [...text].length-1)/2)];
+    }
+    const chars = [...text];
+    const startIdx = [...lower.slice(0, idx)].length;
+    const len = [...g].length;
+    return Array.from({length: len}, (_,i)=>startIdx+i).filter(i=>i<chars.length);
+  }
+
+  function renderCircleWord(text, reveal=false, sound=null, position=null){
+    const chars = [...text];
+    const targets = new Set(reveal && sound ? getTargetIndices(text, sound, position) : []);
+    const circles = chars.map((ch, i)=>{
+      const isLetter = /[A-Za-zÀ-ÿŒœÆæ]/.test(ch);
+      if(!reveal){
+        return `<div class="letterCircle placeholder ${targets.has(i) ? 'targetMark' : ''}"></div>`;
+      }
+      const cls = !isLetter ? "neutral" : (VOWELS_ALL.includes(ch) ? "vowel" : "cons");
+      return `<div class="letterCircle ${targets.has(i) ? 'targetMark' : ''}"><span class="letter ${cls}">${ch}</span></div>`;
+    }).join("");
+    const hint = reveal ? "" : '<div class="circleHint">ÉCOUTE…</div>';
+    return circles + hint;
+  }
+
+  function showScreen(name){
+    $("#settingsScreen").classList.toggle("hidden",name!=="settings");
+    $("#gameScreen").classList.toggle("hidden",name!=="game");
+    $("#resultScreen").classList.toggle("hidden",name!=="result");
+  }
+
+  function resetSessionStats(){
+    idx=0; score=0; streak=0; bestStreak=0; firstTryCorrect=0; finalCorrect=0;
+    stats={start:{ok:0,total:0},middle:{ok:0,total:0},end:{ok:0,total:0}};
+  }
+
+  function clearTokenPlacements(){
+    const tray=$(".tokenTray");
+    const main=$("#mainToken");
+    const tokenWrap=tray.querySelector(".tokenWrap") || document.createElement("div");
+    if(!tray.querySelector(".tokenWrap")){
+      tokenWrap.className="tokenWrap";
+      tray.appendChild(tokenWrap);
+    }
+    if(!tokenWrap.contains(main)){
+      tokenWrap.prepend(main);
+      const hint=document.createElement("div");
+      hint.className="clickHint";
+      hint.textContent="Glisser-déposer ou cliquer puis choisir une case";
+      if(!tokenWrap.querySelector(".clickHint")) tokenWrap.appendChild(hint);
+    }
+    $$(".dropZone").forEach(z=>{
+      z.classList.remove("active","correct","wrong");
+      const slot=z.querySelector(".zoneSlot");
+      if(slot.contains(main)) slot.innerHTML="";
+    });
+    selectedToken=false;
+    main.classList.remove("placedToken","dragging");
+    main.style.outline="none";
+  }
+
+  function renderItem(){
+    answeredCurrent=false; currentHadError=false;
+    const it=session[idx], s=SOUNDS[it.sound];
+    $("#hudItem").textContent=`${idx+1} / ${session.length}`;
+    $("#hudScore").textContent=score;
+    $("#hudStreak").textContent=streak;
+    $("#hudLevel").textContent=it.level;
+    $("#levelTag").textContent=levels[it.level].name;
+    $("#progressBar").style.width=`${(idx/session.length)*100}%`;
+    $("#targetSound").textContent=s.label;
+    $("#targetExample").textContent=s.example;
+    $("#mainToken").textContent=s.label;
+    $("#circleWord").innerHTML=renderCircleWord(it.text,false,it.sound,it.position);
+    $("#itemText").innerHTML="";
+    $("#feedback").textContent="";
+    $("#feedback").className="feedback";
+    $("#stars").textContent="⭐".repeat(Math.min(streak,5));
+    $("#soundMap").classList.add("hidden");
+    $$(".dot").forEach(d=>d.classList.toggle("on",d.dataset.p===it.position));
+    clearTokenPlacements();
+
+    // milieu inactif au niveau 1
+    $$(".dropZone").forEach(z=>{
+      const dis = (it.level===1 && z.dataset.position==="middle");
+      z.style.opacity = dis ? "0.45" : "1";
+      z.style.pointerEvents = dis ? "none" : "auto";
+    });
+
+    if(settings.autoSpeak) setTimeout(()=>speak(it.text),250);
+  }
+
+  function confetti(){
+    const c=$("#confetti"); c.innerHTML="";
+    for(let i=0;i<32;i++){
+      const p=document.createElement("i");
+      p.style.left=Math.random()*100+"vw";
+      p.style.animationDelay=(Math.random()*.35)+"s";
+      p.style.transform=`rotate(${Math.random()*180}deg)`;
+      c.appendChild(p);
+    }
+    setTimeout(()=>c.innerHTML="",1600);
+  }
+
+  function answer(position, zone){
+    if(answeredCurrent) return;
+    const it=session[idx];
+    if(position===it.position){
+      answeredCurrent=true;
+      zone.classList.add("correct");
+      $("#circleWord").innerHTML=renderCircleWord(it.text,true,it.sound,it.position);
+      $("#itemText").innerHTML=renderColoredText(it.text);
+      $("#feedback").textContent=currentHadError ? "Oui, c'est bien cela !" : "Bravo !";
+      $("#feedback").className="feedback good";
+      if(!currentHadError){ score+=2; firstTryCorrect++; }
+      else score+=1;
+      finalCorrect++;
+      stats[it.position].ok++;
+      stats[it.position].total++;
+      streak++;
+      bestStreak=Math.max(bestStreak,streak);
+      $("#hudScore").textContent=score;
+      $("#hudStreak").textContent=streak;
+      $("#stars").textContent="⭐".repeat(Math.min(streak,5));
+      if(streak>0 && streak%5===0) confetti();
+      setTimeout(nextItem,1500);
+    } else {
+      currentHadError=true;
+      zone.classList.add("wrong");
+      $("#feedback").textContent="Pas tout à fait. Réécoute l'item et recommence.";
+      $("#feedback").className="feedback bad";
+      streak=0; $("#hudStreak").textContent=0; $("#stars").textContent="";
+      if(settings.showMap) $("#soundMap").classList.remove("hidden");
+      setTimeout(()=>zone.classList.remove("wrong"),450);
+      speak(it.text);
+      if(!settings.repeatWrong){
+        answeredCurrent=true;
+        stats[it.position].total++;
+        setTimeout(nextItem,950);
+      } else {
+        setTimeout(()=>resetTokenHome(),180);
+      }
+    }
+  }
+
+  function nextItem(){
+    idx++;
+    if(idx>=session.length) finish();
+    else renderItem();
+  }
+
+  function finish(){
+    $("#progressBar").style.width="100%";
+    const pct=Math.round((firstTryCorrect/session.length)*100);
+    $("#finalScore").textContent=pct+"%";
+    $("#finalText").textContent=pct>=85?"Très bonne précision au premier essai.":pct>=65?"Bonne progression.":"Le repérage peut être repris avec davantage d'aides.";
+    $("#firstTry").textContent=`${firstTryCorrect} / ${session.length}`;
+    $("#finalCorrect").textContent=`${finalCorrect} / ${session.length}`;
+    $("#bestStreak").textContent=bestStreak;
+    const labels={start:"Début",middle:"Milieu",end:"Fin"};
+    $("#positionStats").innerHTML=Object.keys(stats).map(p=>`<tr><td>${labels[p]}</td><td>${stats[p].ok}</td><td>${stats[p].total}</td></tr>`).join("");
+    showScreen("result");
+  }
+
+  function start(){
+    if(!buildSession()) return;
+    resetSessionStats();
+    showScreen("game");
+    renderItem();
+  }
+
+  function placeTokenInZone(zone){
+    if(answeredCurrent) return;
+    const token=$("#mainToken");
+    const slot=zone.querySelector(".zoneSlot");
+    slot.innerHTML="";
+    slot.appendChild(token);
+    token.classList.add("placedToken");
+    selectedToken=false;
+    token.style.outline="none";
+    answer(zone.dataset.position, zone);
+  }
+
+  function resetTokenHome(){
+    const tray=$(".tokenTray .tokenWrap");
+    const token=$("#mainToken");
+    if(!tray.contains(token)) tray.prepend(token);
+    token.classList.remove("placedToken");
+    selectedToken=false;
+    token.style.outline="none";
+  }
+
+  function initDnD(){
+    const token=$("#mainToken");
+    token.addEventListener("dragstart", e=>{
+      token.classList.add("dragging");
+      e.dataTransfer.setData("text/plain","token");
+    });
+    token.addEventListener("dragend", ()=>token.classList.remove("dragging"));
+    token.addEventListener("click", ()=>{
+      selectedToken=!selectedToken;
+      token.style.outline = selectedToken ? "4px solid #9db5ff" : "none";
+    });
+
+    $$(".dropZone").forEach(zone=>{
+      zone.addEventListener("dragover", e=>{
+        e.preventDefault();
+        if(answeredCurrent) return;
+        zone.classList.add("active");
+      });
+      zone.addEventListener("dragleave", ()=>zone.classList.remove("active"));
+      zone.addEventListener("drop", e=>{
+        e.preventDefault();
+        zone.classList.remove("active");
+        placeTokenInZone(zone);
+      });
+      zone.addEventListener("click", ()=>{
+        if(selectedToken) placeTokenInZone(zone);
+      });
+    });
+  }
+
+  renderChips();
+  initDnD();
+
+  $("#allSounds").onclick=()=>Object.keys(SOUNDS).forEach(k=>$("#snd_"+k).checked=true);
+  $("#vowelsOnly").onclick=()=>Object.entries(SOUNDS).forEach(([k,s])=>$("#snd_"+k).checked=s.group==="vowel");
+  $("#fricativesOnly").onclick=()=>Object.entries(SOUNDS).forEach(([k,s])=>$("#snd_"+k).checked=s.group==="fricative");
+  $("#startBtn").onclick=start;
+  $("#hearTarget").onclick=speakTarget;
+  $("#hearItem").onclick=()=>speak(session[idx].text);
+  $("#skipBtn").onclick=()=>{ streak=0; stats[session[idx].position].total++; nextItem(); };
+  $("#resetTokenBtn").onclick=resetTokenHome;
+  $("#settingsBtn").onclick=()=>{ speechSynthesis?.cancel?.(); showScreen("settings"); };
+  $("#replayBtn").onclick=start;
+  $("#backSettingsBtn").onclick=()=>showScreen("settings");
+
+  const dlg=$("#helpDialog");
+  $("#helpBtn").onclick=()=>dlg.showModal();
+  $("#closeHelp").onclick=()=>dlg.close();
+
+  if("speechSynthesis" in window) speechSynthesis.getVoices();
+})();
+</script>
+</body>
+</html>
